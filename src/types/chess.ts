@@ -15,7 +15,7 @@ export type ChessPiece = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P' | 'k' | 'q' | 'r' | '
  * où les clés sont les cases (ex: "e4") et les valeurs sont les pièces
  */
 export interface PositionMap {
-    [square: string]: string;
+    [square: string]: ChessPiece;
 }
 
 /**
@@ -25,7 +25,7 @@ export interface PositionMap {
 export interface SecondaryMove {
     from: string;
     to: string;
-    piece: string;
+    piece: ChessPiece;
 }
 
 /**
@@ -35,7 +35,7 @@ export interface SecondaryMove {
 export interface MoveInfo {
     from: string;
     to: string;
-    piece: string;
+    piece: ChessPiece;
     secondaryMove?: SecondaryMove;
 }
 
@@ -46,10 +46,10 @@ export interface MoveInfo {
 export interface MoveDetail {
     from: string;
     to: string;
-    piece: string;
+    piece: ChessPiece;
     secondaryFrom?: string;
     secondaryTo?: string;
-    secondaryPiece?: string;
+    secondaryPiece?: ChessPiece;
 }
 
 /**
@@ -76,6 +76,6 @@ export interface AlgebraicCoords {
  * positions intermédiaires et les détails des mouvements
  */
 export interface GeneratePositionsResult {
-    positions: Array<{ [key: string]: string }>;
+    positions: PositionMap[];
     moveDetails: MoveDetail[];
 }
