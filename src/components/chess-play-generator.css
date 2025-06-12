@@ -1,0 +1,225 @@
+/* Styles pour le conteneur principal */
+.chessboard-container {
+    display: grid;
+    grid-template-columns: repeat(10, 48px);
+    grid-template-rows: repeat(10, 48px);
+    background: #f0d9b5;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    gap: 0;
+    width: fit-content;
+    margin: 0 auto;
+}
+
+/* Style pour toutes les cases (échiquier et coordonnées) */
+.board-cell {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* Styles pour les cases de l'échiquier */
+.chess-square {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.chess-square.light {
+    background-color: rgb(254 243 199);
+}
+
+.chess-square.dark {
+    background-color: rgb(146 64 14);
+}
+
+/* Styles pour les pièces */
+.chess-piece {
+    font-size: 2.5rem;
+    line-height: 1;
+    position: relative;
+    z-index: 10;
+}
+
+.chess-piece.text-white {
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Style pour les pièces fantômes */
+.ghost-piece {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    line-height: 1;
+    color: rgb(34 211 238);
+    text-shadow: 0 0 8px cyan, 0 0 12px cyan;
+    opacity: 0.8;
+}
+
+/* Styles pour les coordonnées */
+.coord-label {
+    font-size: 0.875rem;
+    color: #1f2937;
+    user-select: none;
+}
+
+/* Conteneur principal de l'application */
+.chess-app {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    align-items: center;
+    background-color: #ffffff;
+    min-height: 100vh;
+}
+
+/* Zone du titre */
+.chess-header {
+    width: 100%;
+    padding: 1.5rem;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Zone de contrôle */
+.control-section {
+    width: 100%;
+    padding: 2rem;
+    background-color: #f1f5f9;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Zone de saisie */
+.input-container {
+    padding: 1rem;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.input-label {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1f2937;
+}
+
+/* Style pour le textarea */
+.fen-input {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 80px;
+    max-width: 100%;
+    background-color: white;
+    transition: all 0.2s;
+}
+
+.fen-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Zone des boutons */
+.button-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Zone d'information */
+.info-section {
+    width: 100%;
+    padding: 1rem;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Zone de l'échiquier */
+.board-section {
+    padding: 2rem;
+    background-color: #f1f5f9;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Zone d'aide */
+.help-section {
+    width: 100%;
+    padding: 1.5rem;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Style pour les boutons */
+.control-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.control-button.primary {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.control-button.primary:hover {
+    background-color: #2563eb;
+}
+
+.control-button.secondary {
+    background-color: #64748b;
+    color: white;
+}
+
+.control-button.secondary:hover {
+    background-color: #475569;
+}
+
+.control-button.success {
+    background-color: #22c55e;
+    color: white;
+}
+
+.control-button.success:hover {
+    background-color: #16a34a;
+}
