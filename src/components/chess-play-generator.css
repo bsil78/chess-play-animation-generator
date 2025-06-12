@@ -1,9 +1,28 @@
-/* Styles pour le conteneur principal */
+/**
+ * Structure générale du CSS
+ * -----------------------
+ * Ce fichier définit l'apparence visuelle complète de l'application d'animation d'échecs.
+ * Il utilise une approche modulaire avec des composants distincts pour :
+ * - Le conteneur de l'échiquier (grille 10x10 incluant les coordonnées)
+ * - Les cases de l'échiquier (claires et foncées)
+ * - Les pièces et leurs effets visuels
+ * - Les contrôles et l'interface utilisateur
+ */
+
+/**
+ * Conteneur de l'échiquier
+ * ----------------------
+ * Utilise CSS Grid pour créer une grille 10x10 :
+ * - 8x8 cases centrales pour l'échiquier
+ * - 1 rangée/colonne de chaque côté pour les coordonnées
+ */
 .chessboard-container {
     display: inline-grid;
     grid-template-columns: repeat(10, 40px);
+    /* 40px par case */
     grid-template-rows: repeat(10, 40px);
     gap: 0;
+    /* Pas d'espace entre les cases */
     padding: 8px;
     background-color: #fff;
     border: 1px solid #ccc;
@@ -29,6 +48,13 @@
     position: relative;
 }
 
+/**
+ * Couleurs de l'échiquier
+ * ---------------------
+ * Utilise les couleurs traditionnelles d'un échiquier en bois :
+ * - Cases claires : beige clair (#f0d9b5)
+ * - Cases foncées : marron moyen (#b58863)
+ */
 .chess-square.light {
     background-color: #f0d9b5;
 }
@@ -37,7 +63,14 @@
     background-color: #b58863;
 }
 
-/* Styles pour les pièces */
+/**
+ * Styles des pièces
+ * ---------------
+ * Les pièces sont affichées en utilisant des caractères Unicode avec :
+ * - Pièces blanches : couleur blanche avec ombre portée pour la lisibilité
+ * - Pièces noires : couleur noire pure
+ * - Effets de surbrillance pour le dernier coup joué
+ */
 .chess-piece {
     font-size: 2rem;
     line-height: 1;
@@ -49,7 +82,14 @@
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
-/* Style pour les pièces fantômes */
+/**
+ * Effets visuels des pièces fantômes
+ * -------------------------------
+ * Les pièces fantômes indiquent la position d'origine d'un mouvement :
+ * - Couleur cyan semi-transparente
+ * - Effet de lueur (text-shadow)
+ * - Positionnement absolu pour superposition
+ */
 .ghost-piece {
     position: absolute;
     inset: 0;
@@ -63,14 +103,27 @@
     z-index: 0;
 }
 
-/* Styles pour les coordonnées */
+/**
+ * Système de coordonnées
+ * -------------------
+ * Affiche les coordonnées algébriques autour du plateau :
+ * - Rangées : 1-8 (verticalement)
+ * - Colonnes : a-h (horizontalement)
+ */
 .coord-label {
     font-size: 0.875rem;
     color: #666;
     user-select: none;
 }
 
-/* Conteneur principal de l'application */
+/**
+ * Interface utilisateur principale
+ * ---------------------------
+ * Structure de l'application avec mise en page responsive :
+ * - Largeur maximale de 1200px
+ * - Marge automatique pour centrage
+ * - Organisation verticale avec espacement régulier
+ */
 .chess-app {
     max-width: 1200px;
     margin: 0 auto;
@@ -80,7 +133,11 @@
     gap: 0.5rem;
 }
 
-/* Zone du titre */
+/**
+ * En-tête de l'application
+ * ----------------------
+ * Zone de titre avec style minimal et élégant
+ */
 .chess-header {
     text-align: center;
     padding: 0.5rem;
@@ -93,7 +150,14 @@
     color: #374151;
 }
 
-/* Zone de contrôle */
+/**
+ * Panneau de contrôle
+ * ----------------
+ * Zone de contrôle principale contenant :
+ * - Zone de saisie FEN/PGN
+ * - Boutons de contrôle de l'animation
+ * - Style moderne avec ombre portée et coins arrondis
+ */
 .control-section {
     margin: 0 auto;
     max-width: 800px;
@@ -107,7 +171,13 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Zone de saisie */
+/**
+ * Zone de saisie des coups
+ * ---------------------
+ * Champ de texte pour la saisie FEN et des coups :
+ * - Support des formats standard et français
+ * - Style adaptatif et responsive
+ */
 .input-container {
     margin-bottom: 0.5rem;
     width: 100%;
@@ -140,7 +210,14 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-/* Zone des boutons */
+/**
+ * Groupe de boutons de contrôle
+ * --------------------------
+ * Conteneur flexible pour les boutons de contrôle :
+ * - Disposition horizontale avec espacement régulier
+ * - Centrage automatique
+ * - Répartition responsive des boutons
+ */
 .button-group {
     display: flex;
     gap: 0.5rem;
@@ -148,6 +225,14 @@
     justify-content: center;
 }
 
+/**
+ * Style des boutons
+ * --------------
+ * Design moderne et interactif :
+ * - Plusieurs variantes de couleur (primary, secondary, success)
+ * - États hover et disabled
+ * - Effets de transition fluides
+ */
 .control-button {
     display: inline-flex;
     align-items: center;

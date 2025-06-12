@@ -4,21 +4,46 @@ import * as htmlToImage from 'html-to-image';
 import GIF from 'gif.js';
 import './chess-play-generator.css';
 
-// Types pour les pièces d'échecs
+/**
+ * Types et Interfaces
+ * ------------------
+ * Cette section définit la structure des données utilisées dans l'application.
+ */
+
+/**
+ * Type représentant les pièces d'échecs possibles.
+ * Majuscules pour les pièces blanches, minuscules pour les noires.
+ * K/k: Roi, Q/q: Dame, R/r: Tour, B/b: Fou, N/n: Cavalier, P/p: Pion
+ */
 type ChessPiece = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P' | 'k' | 'q' | 'r' | 'b' | 'n' | 'p';
+
+/**
+ * Mapping entre les pièces et leurs symboles Unicode pour l'affichage
+ */
 type PieceSymbols = { [K in ChessPiece]: string };
 
-// Interfaces pour la gestion des positions et mouvements
+/**
+ * Structure représentant l'échiquier comme un dictionnaire
+ * où les clés sont les cases (ex: "e4") et les valeurs sont les pièces
+ */
 interface PositionMap {
   [square: string]: string;
 }
 
+/**
+ * Représente un mouvement secondaire, utilisé principalement pour le roque
+ * où la tour doit aussi se déplacer
+ */
 interface SecondaryMove {
   from: string;
   to: string;
   piece: string;
 }
 
+/**
+ * Information complète sur un mouvement, incluant un éventuel
+ * mouvement secondaire pour le roque
+ */
 interface MoveInfo {
   from: string;
   to: string;
@@ -26,6 +51,10 @@ interface MoveInfo {
   secondaryMove?: SecondaryMove;
 }
 
+/**
+ * Détails d'un mouvement pour l'affichage et l'animation,
+ * incluant les informations pour le roque
+ */
 interface MoveDetail {
   from: string;
   to: string;
@@ -35,18 +64,27 @@ interface MoveDetail {
   secondaryPiece?: string;
 }
 
+/**
+ * Coordonnées algébriques sur l'échiquier (0-7 pour les rangs et colonnes)
+ */
 interface AlgebraicCoords {
   row: number; // 0-7 pour les rangées (8-1)
   col: number; // 0-7 pour les colonnes (a-h)
 }
 
+/**
+ * Résultat de la génération des positions, contenant toutes les
+ * positions intermédiaires et les détails des mouvements
+ */
 interface GeneratePositionsResult {
   positions: Array<{ [key: string]: string }>;
 
   moveDetails: MoveDetail[];
 }
 
-// Interfaces pour la conversion de FEN
+/**
+ * Types pour la gestion de la notation française
+ */
 interface IsFrenchFEN {
   (fen: string): boolean;
 }
@@ -55,70 +93,121 @@ interface FrenchToStandardFEN {
   (fen: string): string;
 }
 
+/**
+ * Composant principal ChessAnimator
+ * --------------------------------
+ * Gère l'affichage et l'animation d'une séquence de coups d'échecs
+ */
 const ChessAnimator = () => {
+  /**
+   * Hooks d'état (useState)
+   * ----------------------
+   */
+
+  // Référence vers l'élément DOM de l'échiquier pour la génération de GIF
   const boardRef = useRef<HTMLDivElement>(null);
+
+  // Position FEN et coups en entrée
   const [fenInput, setFenInput] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 1.e4 e5 2.Nf3 Nc6');
+
+  // État actuel de l'échiquier
   const [currentPosition, setCurrentPosition] = useState<{ [key: string]: string }>({});
+
+  // Contrôle de l'animation
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
+
+  // Liste des coups et positions
   const [moves, setMoves] = useState<string[]>([]);
   const [positions, setPositions] = useState<Array<{ [key: string]: string }>>([]);
   const [moveDetails, setMoveDetails] = useState<MoveDetail[]>([]);
+
+  // État de la génération du GIF
   const [isGeneratingGif, setIsGeneratingGif] = useState(false);
 
+  // Position FEN initiale standard
   const initialFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
-  // Conversion des pièces FEN vers symboles Unicode (standard et français)
+  /**
+   * Table de conversion des pièces vers leurs symboles Unicode
+   * Utilisée pour l'affichage des pièces sur l'échiquier
+   */
   const pieceSymbols: PieceSymbols = {
     // Format standard
     'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
     'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
   };
 
-  // Détecte si le FEN est en format français
+  /**
+   * Fonctions de conversion du format français
+   * ----------------------------------------
+   */
+
+  /**
+   * Détecte si une chaîne FEN utilise la notation française
+   * (R->K, D->Q, T->R, F->B, C->N pour Roi, Dame, Tour, Fou, Cavalier)
+   */
   const isFrenchFEN = React.useCallback<IsFrenchFEN>((fen) => {
     const boardPart = fen.split(' ')[0];
     return /[DdTtFfCc]/.test(boardPart);
   }, []);
 
-  // Convertit FEN français vers standard pour traitement interne
+  /**
+   * Convertit une position en notation française vers la notation standard
+   * Utilisé pour normaliser l'entrée avant traitement
+   */
   const frenchToStandardFEN = React.useCallback<FrenchToStandardFEN>((fen) => {
     if (!isFrenchFEN(fen)) return fen;
 
     return fen
-      .replace(/R/g, 'K').replace(/r/g, 'k') // Roi
-      .replace(/D/g, 'Q').replace(/d/g, 'q') // Dame
-      .replace(/T/g, 'R').replace(/t/g, 'r') // Tour
-      .replace(/F/g, 'B').replace(/f/g, 'b') // Fou
-      .replace(/C/g, 'N').replace(/c/g, 'n'); // Cavalier
-    // P/p restent identiques pour Pion
+      .replace(/R/g, 'K').replace(/r/g, 'k') // Roi -> King
+      .replace(/D/g, 'Q').replace(/d/g, 'q') // Dame -> Queen
+      .replace(/T/g, 'R').replace(/t/g, 'r') // Tour -> Rook
+      .replace(/F/g, 'B').replace(/f/g, 'b') // Fou -> Bishop
+      .replace(/C/g, 'N').replace(/c/g, 'n'); // Cavalier -> kNight
   }, [isFrenchFEN]);
-  // Conversion notation algébrique vers coordonnées
 
+  /**
+   * Fonctions de conversion de coordonnées
+   * ------------------------------------
+   */
 
-  // Conversion coordonnées vers notation algébrique  
+  /**
+   * Convertit des coordonnées numériques (row, col) en notation algébrique (ex: "e4")
+   * @param row Numéro de rangée (0-7)
+   * @param col Numéro de colonne (0-7)
+   * @returns Notation algébrique de la case (ex: "e4")
+   */
   const coordsToAlgebraic = React.useCallback((row: number, col: number): string => {
     return String.fromCharCode(97 + col) + (8 - row);
   }, []);
 
-  // Parse FEN pour extraire la position (compatible français et standard)
+  /**
+   * Traitement de la notation FEN
+   * ---------------------------
+   * La notation FEN (Forsyth-Edwards Notation) est un format standard
+   * pour décrire une position d'échecs complète
+   */
   const parseFEN = React.useCallback((fen: string): { [key: string]: string } => {
-    // Convertit automatiquement le FEN français en standard pour traitement
+    // Convertit le FEN français en standard si nécessaire
     const standardFEN = frenchToStandardFEN(fen);
     const parts = standardFEN.split(' ');
     const boardPart = parts[0];
     const ranks = boardPart.split('/');
     const position: { [key: string]: string } = {};
 
+    // Parse chaque rangée
     ranks.forEach((rank: string, rankIndex: number) => {
       let fileIndex = 0;
       for (let char of rank) {
         if (isNaN(Number(char))) {
+          // Si c'est une pièce, l'ajouter à la position
           const coords: AlgebraicCoords = { row: rankIndex, col: fileIndex };
           const square = coordsToAlgebraic(coords.row, coords.col);
           position[square] = char;
           fileIndex++;
         } else {
+          // Si c'est un nombre, avancer le fileIndex
           fileIndex += parseInt(char);
         }
       }
@@ -127,37 +216,53 @@ const ChessAnimator = () => {
     return position;
   }, [frenchToStandardFEN, coordsToAlgebraic]);
 
-  // Parse les coups depuis la notation PGN
+  /**
+   * Traitement de la notation PGN
+   * ---------------------------
+   * Extrait la liste des coups depuis une chaîne en notation algébrique
+   */
   const parseMoves = (moveString: string): string[] => {
     if (!moveString) return [];
 
-    // Supprime les numéros de coups et divise les coups
-    const cleanMoves: string[] = moveString
+    // Nettoie et divise la chaîne de coups
+    return moveString
       .replace(/\d+\./g, '') // Supprime les numéros de coups
       .trim()
       .split(/\s+/)
       .filter((move: string) => move.length > 0);
-
-    return cleanMoves;
   };
 
-  // Vérifie s'il y a des pièces entre la case de départ et d'arrivée
+  /**
+   * Validation des mouvements
+   * -----------------------
+   */
+
+  /**
+   * Vérifie s'il y a des pièces entre deux cases
+   * Utilisé pour les mouvements de la tour, du fou et de la dame
+   * @param from Case de départ
+   * @param to Case d'arrivée
+   * @param position Position actuelle de l'échiquier
+   * @returns true s'il y a une pièce entre les deux cases
+   */
   const isPieceBetween = React.useCallback((
     from: string,
     to: string,
     position: PositionMap
   ): boolean => {
+    // Convertit les coordonnées algébriques en indices numériques
     const fromFile = from.charCodeAt(0) - 97;
     const fromRank = 8 - parseInt(from[1]);
     const toFile = to.charCodeAt(0) - 97;
     const toRank = 8 - parseInt(to[1]);
 
+    // Calcule la direction du mouvement
     const fileStep = Math.sign(toFile - fromFile) || 0;
     const rankStep = Math.sign(toRank - fromRank) || 0;
 
+    // Vérifie chaque case sur le chemin
     let currentFile = fromFile + fileStep;
     let currentRank = fromRank + rankStep;
-
     while (currentFile !== toFile || currentRank !== toRank) {
       const square = String.fromCharCode(97 + currentFile) + (8 - currentRank);
       if (position[square]) return true;
@@ -168,7 +273,14 @@ const ChessAnimator = () => {
     return false;
   }, []);
 
-  // Vérifie si la pièce peut légalement se déplacer vers la case cible
+  /**
+   * Vérifie si un mouvement est légal selon les règles d'échecs
+   * @param from Case de départ
+   * @param to Case d'arrivée
+   * @param piece Pièce à déplacer
+   * @param position Position actuelle de l'échiquier
+   * @returns true si le mouvement est légal
+   */
   const isLegalMove = React.useCallback((
     from: string,
     to: string,
@@ -229,7 +341,14 @@ const ChessAnimator = () => {
       default: return false;
     }
   }, [isPieceBetween]);
-  // Trouve la pièce qui peut faire le mouvement
+  /**
+   * Trouve la pièce capable d'effectuer un mouvement donné
+   * Gère aussi les cas spéciaux comme le roque
+   * @param position Position actuelle
+   * @param move Coup en notation algébrique
+   * @param isWhiteTurn True si c'est aux blancs de jouer
+   * @returns Informations sur le mouvement ou null si impossible
+   */
   const findPieceForMove = React.useCallback((
     position: PositionMap,
     move: string,
@@ -313,11 +432,17 @@ const ChessAnimator = () => {
       isLegalMove(square, targetSquare, piece, position)
     ); return legalSquare ? { from: legalSquare, to: targetSquare, piece } : null;
   }, [isLegalMove]);
-  // Génère toutes les positions de l'animation// Réinitialise à la position de base
+  /**
+   * Gestion de l'animation et de l'état
+   * ---------------------------------
+   */
+
+  /**
+   * Réinitialise l'animation à la position initiale
+   */
   const resetToInitial = React.useCallback(() => {
     setIsAnimating(false);
     setCurrentMoveIndex(0);
-    // Si nous avons déjà des positions, utilise la première, sinon parse le FEN initial
     if (positions.length > 0) {
       setCurrentPosition(positions[0]);
     } else {
@@ -327,9 +452,12 @@ const ChessAnimator = () => {
     }
   }, [positions, initialFEN, parseFEN]);
 
-  // Détermine l'orientation du plateau selon le joueur actuel
+  /**
+   * Détermine l'orientation de l'échiquier selon le joueur actif
+   * @returns true si les blancs sont en bas, false si les noirs sont en bas
+   */
   const getBoardOrientation = () => {
-    if (positions.length === 0) return true; // Par défaut, côté blancs
+    if (positions.length === 0) return true;
 
     const parts = fenInput.split(' ');
     if (parts.length < 2) return true;
@@ -338,11 +466,15 @@ const ChessAnimator = () => {
     const standardFEN = frenchToStandardFEN(fenPart);
     const activeColor = standardFEN.split(' ')[1];
 
-    // true = côté blancs en bas, false = côté noirs en bas
     return activeColor === 'w';
   };
 
-  // Génère toutes les positions à partir d'une position initiale et d'une liste de coups
+  /**
+   * Génère la séquence complète des positions
+   * @param initialPos Position initiale
+   * @param moveList Liste des coups
+   * @returns Toutes les positions et détails des mouvements
+   */
   const generatePositions = React.useCallback((
     initialPos: { [key: string]: string },
     moveList: string[]
@@ -384,7 +516,32 @@ const ChessAnimator = () => {
     });
 
     return { positions, moveDetails };
-  }, [findPieceForMove]);  // Va à une position spécifique
+  }, [findPieceForMove]);
+  /**
+   * Système de navigation et contrôle
+   * ------------------------------
+   * Architecture du système de contrôle :
+   * 
+   * 1. Navigation temporelle :
+   * - Déplacement précis entre positions
+   * - Gestion des limites (début/fin)
+   * - Transitions fluides
+   * 
+   * 2. Contrôles utilisateur :
+   * - Avance/recul pas à pas
+   * - Lecture automatique
+   * - Réinitialisation
+   * 
+   * 3. Gestion des états :
+   * - Synchronisation position/index
+   * - Validation des mouvements
+   * - Maintien de la cohérence
+   * 
+   * Toutes les fonctions de navigation sont optimisées avec useCallback
+   * pour éviter les re-rendus inutiles et maintenir les performances.
+   */
+
+  // Navigation vers une position spécifique avec validation
   const goToPosition = React.useCallback((index: number) => {
     if (index >= 0 && index < positions.length) {
       setCurrentMoveIndex(index);
@@ -410,8 +567,27 @@ const ChessAnimator = () => {
   const toggleAnimation = React.useCallback(() => {
     setIsAnimating(!isAnimating);
   }, [isAnimating]);
-
-  // Crée un GIF à partir de toutes les positions
+  /**
+   * Génération de GIF
+   * ----------------
+   * 
+   * La génération de GIF se fait en plusieurs étapes :
+   * 1. Capture de l'état initial et arrêt de l'animation en cours
+   * 2. Création d'un objet GIF avec les paramètres optimaux
+   * 3. Itération sur toutes les positions pour capturer chaque frame
+   * 4. Génération et téléchargement du fichier final
+   * 
+   * Paramètres techniques :
+   * - Résolution : taille exacte du conteneur d'échiquier
+   * - Qualité : 10 (compromis taille/qualité)
+   * - Workers : 2 (parallélisation du traitement)
+   * - Délai : 1000ms entre chaque frame
+   * 
+   * Gestion des erreurs :
+   * - Validation des prérequis (référence DOM, positions)
+   * - Restauration de l'état en cas d'erreur
+   * - Nettoyage des ressources après génération
+   */
   const generateGif = React.useCallback(async () => {
     if (!boardRef.current || positions.length === 0) return;
 
@@ -487,8 +663,28 @@ const ChessAnimator = () => {
       setIsGeneratingGif(false);
     }
   }, [positions, currentMoveIndex, isAnimating]);
+  /**
+   * Gestion des effets et cycles de vie
+   * --------------------------------
+   * L'application utilise plusieurs effets React pour :
+   * 
+   * 1. Animation automatique :
+   * - Timer pour les transitions entre positions
+   * - Gestion des états de pause/lecture
+   * - Nettoyage automatique des ressources
+   * 
+   * 2. Synchronisation FEN/Position :
+   * - Parse et validation des entrées
+   * - Génération des positions intermédiaires
+   * - Mise à jour de l'interface
+   * 
+   * 3. Gestion de la mémoire :
+   * - Nettoyage des timers
+   * - Libération des ressources GIF
+   * - Optimisation des re-rendus
+   */
 
-  // Effet pour l'animation automatique
+  // Effet pour l'animation automatique : gestion du timing et transitions
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
 
@@ -504,7 +700,26 @@ const ChessAnimator = () => {
       if (timer) clearTimeout(timer);
     };
   }, [isAnimating, currentMoveIndex, positions.length, goToPosition]);
-  // Effet pour générer automatiquement l'animation quand le FEN change
+  /**
+   * Gestion des entrées FEN et mise à jour de l'état
+   * --------------------------------------------
+   * Processus complet de traitement des entrées :
+   * 
+   * 1. Validation et parsing :
+   * - Vérification du format (standard/français)
+   * - Extraction position et coups
+   * - Normalisation des données
+   * 
+   * 2. Génération des états :
+   * - Calcul des positions intermédiaires
+   * - Validation des mouvements
+   * - Création des détails d'animation
+   * 
+   * 3. Mise à jour synchronisée :
+   * - Position actuelle
+   * - Index de mouvement
+   * - États d'animation
+   */
   useEffect(() => {
     if (fenInput && fenInput.trim().length > 0) {
       const parts = fenInput.split(' ');
@@ -524,8 +739,25 @@ const ChessAnimator = () => {
       setCurrentMoveIndex(0);
     }
   }, [fenInput, parseFEN, generatePositions]);
-
-  // Rendu de l'échiquier avec la nouvelle structure 10x10
+  /**
+   * Rendu de l'interface graphique
+   * ----------------------------
+   * Le rendu de l'échiquier est optimisé pour :
+   * 1. Performances : utilisation de React.useCallback pour les fonctions clés
+   * 2. Accessibilité : support du contraste pour les pièces
+   * 3. Responsive : adaptation à différentes tailles d'écran
+   * 
+   * Architecture du rendu :
+   * - Grille 10x10 (8x8 + coordonnées)
+   * - Orientation dynamique selon le joueur actif
+   * - Gestion des surlignages et effets visuels
+   * - Support des pièces fantômes pour visualisation
+   * 
+   * Optimisations :
+   * - Mise en cache des calculs de position
+   * - Rendu conditionnel des effets visuels
+   * - Gestion efficace des états transitoires
+   */
   const renderBoard = () => {
     const isWhitePerspective = getBoardOrientation();
     const board = [];
