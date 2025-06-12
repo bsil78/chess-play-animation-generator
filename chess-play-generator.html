@@ -189,8 +189,10 @@ const ChessAnimator = () => {
         const moveDet = {
           from: moveInfo.from,
           to: moveInfo.to,
+          piece: moveInfo.piece,
           secondaryFrom: moveInfo.secondaryMove?.from,
-          secondaryTo: moveInfo.secondaryMove?.to
+          secondaryTo: moveInfo.secondaryMove?.to,
+          secondaryPiece: moveInfo.secondaryMove?.piece
         };
         moveDetails.push(moveDet);
 
@@ -224,6 +226,21 @@ const ChessAnimator = () => {
     setMoves([]);
     setPositions([initialPos]);
     setMoveDetails([]);
+  };
+
+  // Détermine l'orientation du plateau selon le joueur actuel
+  const getBoardOrientation = () => {
+    if (positions.length === 0) return true; // Par défaut, côté blancs
+    
+    const parts = fenInput.split(' ');
+    if (parts.length < 2) return true;
+    
+    const fenPart = parts.slice(0, 6).join(' ');
+    const standardFEN = frenchToStandardFEN(fenPart);
+    const activeColor = standardFEN.split(' ')[1];
+    
+    // true = côté blancs en bas, false = côté noirs en bas
+    return activeColor === 'w';
   };
 
   // Génère l'animation
@@ -276,19 +293,27 @@ const ChessAnimator = () => {
   // Rendu de l'échiquier
   const renderBoard = () => {
     const board = [];
+    const isWhitePerspective = getBoardOrientation();
     
     // Détermine les cases du dernier mouvement pour le surlignage
     const lastMoveSquares = [];
-    if (currentMoveIndex > 0 && moveDetails[currentMoveIndex - 1]) {
-      const lastMove = moveDetails[currentMoveIndex - 1];
-      lastMoveSquares.push(lastMove.from, lastMove.to);
-      if (lastMove.secondaryFrom && lastMove.secondaryTo) {
-        lastMoveSquares.push(lastMove.secondaryFrom, lastMove.secondaryTo);
+    const currentMove = currentMoveIndex > 0 ? moveDetails[currentMoveIndex - 1] : null;
+    
+    if (currentMove) {
+      lastMoveSquares.push(currentMove.from, currentMove.to);
+      if (currentMove.secondaryFrom && currentMove.secondaryTo) {
+        lastMoveSquares.push(currentMove.secondaryFrom, currentMove.secondaryTo);
       }
     }
     
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
+    // Détermine l'ordre des rangées et colonnes selon l'orientation
+    const rows = isWhitePerspective ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0];
+    const cols = isWhitePerspective ? [0, 1, 2, 3, 4, 5, 6, 7] : [7, 6, 5, 4, 3, 2, 1, 0];
+    
+    for (let rowIdx = 0; rowIdx < 8; rowIdx++) {
+      for (let colIdx = 0; colIdx < 8; colIdx++) {
+        const row = rows[rowIdx];
+        const col = cols[colIdx];
         const isLight = (row + col) % 2 === 0;
         const square = coordsToAlgebraic(row, col);
         const piece = currentPosition[square];
@@ -297,16 +322,43 @@ const ChessAnimator = () => {
         const isLastMoveSquare = lastMoveSquares.includes(square);
         const isWhitePiece = piece && piece === piece.toUpperCase();
         
+        // Détermine si on doit afficher une pièce fantôme
+        let ghostPiece = null;
+        if (currentMove && currentMoveIndex > 0) {
+          // Pièce fantôme sur la case de départ du mouvement principal
+          if (square === currentMove.from) {
+            ghostPiece = currentMove.piece;
+          }
+          // Pièce fantôme sur la case de départ du mouvement secondaire (roque)
+          else if (currentMove.secondaryFrom && square === currentMove.secondaryFrom) {
+            ghostPiece = currentMove.secondaryPiece;
+          }
+        }
+        
         board.push(
           <div
-            key={`${row}-${col}`}
-            className={`w-12 h-12 flex items-center justify-center text-2xl font-bold ${
+            key={`${rowIdx}-${colIdx}`}
+            className={`w-12 h-12 flex items-center justify-center text-2xl font-bold relative ${
               isLight ? 'bg-amber-100' : 'bg-amber-800'
             }`}
           >
+            {/* Pièce fantôme (position de départ) */}
+            {ghostPiece && (
+              <span 
+                className="absolute inset-0 flex items-center justify-center text-cyan-400"
+                style={{
+                  textShadow: '0 0 8px cyan, 0 0 12px cyan',
+                  opacity: 0.8
+                }}
+              >
+                {pieceSymbols[ghostPiece]}
+              </span>
+            )}
+            
+            {/* Pièce normale (position actuelle) */}
             {piece && (
               <span 
-                className={`${
+                className={`relative z-10 ${
                   isWhitePiece 
                     ? 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]' 
                     : 'text-black'
@@ -314,9 +366,9 @@ const ChessAnimator = () => {
                 style={{
                   textShadow: isWhitePiece 
                     ? (isLastMoveSquare 
-                        ? '0 0 3px cyan, 1px 1px 1px rgba(0,0,0,0.8)' 
+                        ? '0 0 3px lime, 1px 1px 1px rgba(0,0,0,0.8)' 
                         : '1px 1px 1px rgba(0,0,0,0.8)')
-                    : (isLastMoveSquare ? '0 0 3px cyan' : 'none')
+                    : (isLastMoveSquare ? '0 0 3px lime' : 'none')
                 }}
               >
                 {pieceSymbols[piece]}
@@ -332,7 +384,7 @@ const ChessAnimator = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white">
       <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
-        Animateur d'Échecs FEN
+        Animateur d'Échecs FEN avec Pièce Fantôme
       </h1>
       
       <div className="mb-6">
@@ -389,8 +441,54 @@ const ChessAnimator = () => {
       )}
 
       <div className="flex justify-center">
-        <div className="grid grid-cols-8 gap-0 border-2 border-gray-800 inline-block">
-          {renderBoard()}
+        <div className="inline-block">
+          {/* Coordonnées supérieures (colonnes a-h ou h-a selon orientation) */}
+          <div className="flex">
+            <div className="w-6"></div> {/* Espace pour coin */}
+            {(getBoardOrientation() ? ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] : ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a']).map(file => (
+              <div key={`top-${file}`} className="w-12 h-6 flex items-center justify-center text-sm font-semibold text-gray-700">
+                {file}
+              </div>
+            ))}
+            <div className="w-6"></div> {/* Espace pour coin */}
+          </div>
+          
+          {/* Échiquier avec coordonnées latérales */}
+          <div className="flex">
+            {/* Coordonnées gauches (rangées 8-1 ou 1-8 selon orientation) */}
+            <div className="flex flex-col">
+              {(getBoardOrientation() ? [8, 7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7, 8]).map(rank => (
+                <div key={`left-${rank}`} className="w-6 h-12 flex items-center justify-center text-sm font-semibold text-gray-700">
+                  {rank}
+                </div>
+              ))}
+            </div>
+            
+            {/* Échiquier principal */}
+            <div className="grid grid-cols-8 gap-0 border-2 border-gray-800">
+              {renderBoard()}
+            </div>
+            
+            {/* Coordonnées droites (rangées 8-1 ou 1-8 selon orientation) */}
+            <div className="flex flex-col">
+              {(getBoardOrientation() ? [8, 7, 6, 5, 4, 3, 2, 1] : [1, 2, 3, 4, 5, 6, 7, 8]).map(rank => (
+                <div key={`right-${rank}`} className="w-6 h-12 flex items-center justify-center text-sm font-semibold text-gray-700">
+                  {rank}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Coordonnées inférieures (colonnes a-h ou h-a selon orientation) */}
+          <div className="flex">
+            <div className="w-6"></div> {/* Espace pour coin */}
+            {(getBoardOrientation() ? ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] : ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a']).map(file => (
+              <div key={`bottom-${file}`} className="w-12 h-6 flex items-center justify-center text-sm font-semibold text-gray-700">
+                {file}
+              </div>
+            ))}
+            <div className="w-6"></div> {/* Espace pour coin */}
+          </div>
         </div>
       </div>
 
@@ -398,6 +496,12 @@ const ChessAnimator = () => {
         <p>Format accepté: FEN standard ou français suivi des coups en notation algébrique</p>
         <p>Exemple standard: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 1.e4 e5 2.Nf3 Nc6</p>
         <p>Exemple français: tcfdrcft/pppppppp/8/8/8/8/PPPPPPPP/TCFDRCFT w - - 0 1 1.e4 e5 2.Cf3 Cc6</p>
+        <p className="mt-2 text-cyan-600 font-medium">
+          🔮 Les pièces fantômes cyan indiquent la position de départ du dernier mouvement
+        </p>
+        <p className="mt-1 text-purple-600 font-medium">
+          🔄 L'échiquier s'oriente automatiquement selon le joueur dont c'est le tour (w=blancs en bas, b=noirs en bas)
+        </p>
       </div>
     </div>
   );
