@@ -1,5 +1,6 @@
 import React from 'react';
 import { Play, RotateCcw, Pause, StepForward, StepBack, Download } from 'lucide-react';
+import './GameControls.css';
 
 /**
  * Props pour le composant GameControls

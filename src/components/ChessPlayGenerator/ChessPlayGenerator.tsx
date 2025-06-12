@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as htmlToImage from 'html-to-image';
 import GIF from 'gif.js';
-import ChessBoard from './ChessBoard';
-import GameControls from './GameControls';
-import { PositionMap, MoveDetail } from '../types/chess';
+import ChessBoard from '../ChessBoard/ChessBoard';
+import GameControls from '../GameControls/GameControls';
+import { PositionMap, MoveDetail } from '../../types/chess';
 import {
   parseFEN,
   parseMoves,
   generatePositions,
   frenchToStandardFEN
-} from '../utils/ChessRules';
-import './chess-play-generator.css';
+} from '../../utils/ChessRules';
+import './ChessPlayGenerator.css';
 
 /**
  * Composant principal ChessAnimator

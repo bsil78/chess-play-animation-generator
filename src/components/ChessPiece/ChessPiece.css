@@ -1,0 +1,39 @@
+/**
+ * Styles des pièces
+ * ---------------
+ * Les pièces sont affichées en utilisant des caractères Unicode avec :
+ * - Pièces blanches : couleur blanche avec ombre portée pour la lisibilité
+ * - Pièces noires : couleur noire pure
+ * - Effets de surbrillance pour le dernier coup joué
+ */
+.chess-piece {
+    font-size: 2rem;
+    line-height: 1;
+    z-index: 1;
+}
+
+.chess-piece.text-white {
+    color: #ffffff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/**
+ * Effets visuels des pièces fantômes
+ * -------------------------------
+ * Les pièces fantômes indiquent la position d'origine d'un mouvement :
+ * - Couleur cyan semi-transparente
+ * - Effet de lueur (text-shadow)
+ * - Positionnement absolu pour superposition
+ */
+.ghost-piece {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: rgb(34 211 238);
+    opacity: 0.8;
+    text-shadow: 0 0 8px cyan;
+    z-index: 0;
+}

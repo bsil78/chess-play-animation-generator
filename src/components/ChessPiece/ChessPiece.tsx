@@ -1,5 +1,6 @@
 import React from 'react';
-import { ChessPiece as ChessPieceType } from '../types/chess';
+import { ChessPiece as ChessPieceType } from '../../types/chess';
+import './ChessPiece.css';
 
 /** 
  * Table de conversion des pièces vers leurs symboles Unicode

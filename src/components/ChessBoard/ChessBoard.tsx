@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
-import ChessPiece from './ChessPiece';
-import { PositionMap, ChessPiece as ChessPieceType } from '../types/chess';
+import ChessPiece from '../ChessPiece/ChessPiece';
+import { PositionMap, ChessPiece as ChessPieceType } from '../../types/chess';
+import './ChessBoard.css';
 
 interface ChessBoardProps {
     currentPosition: PositionMap;
