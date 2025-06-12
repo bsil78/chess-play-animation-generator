@@ -1,20 +1,18 @@
 /* Styles pour le conteneur principal */
 .chessboard-container {
-    display: grid;
-    grid-template-columns: repeat(10, 48px);
-    grid-template-rows: repeat(10, 48px);
-    background: #f0d9b5;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    display: inline-grid;
+    grid-template-columns: repeat(10, 40px);
+    grid-template-rows: repeat(10, 40px);
     gap: 0;
+    padding: 8px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
     width: fit-content;
-    margin: 0 auto;
 }
 
 /* Style pour toutes les cases (échiquier et coordonnées) */
 .board-cell {
-    width: 48px;
-    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -23,28 +21,27 @@
 
 /* Styles pour les cases de l'échiquier */
 .chess-square {
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    width: 100%;
-    height: 100%;
 }
 
 .chess-square.light {
-    background-color: rgb(254 243 199);
+    background-color: #f0d9b5;
 }
 
 .chess-square.dark {
-    background-color: rgb(146 64 14);
+    background-color: #b58863;
 }
 
 /* Styles pour les pièces */
 .chess-piece {
-    font-size: 2.5rem;
+    font-size: 2rem;
     line-height: 1;
-    position: relative;
-    z-index: 10;
+    z-index: 1;
 }
 
 .chess-piece.text-white {
@@ -60,46 +57,48 @@
     align-items: center;
     justify-content: center;
     font-size: 2rem;
-    line-height: 1;
     color: rgb(34 211 238);
-    text-shadow: 0 0 8px cyan, 0 0 12px cyan;
     opacity: 0.8;
+    text-shadow: 0 0 8px cyan;
+    z-index: 0;
 }
 
 /* Styles pour les coordonnées */
 .coord-label {
     font-size: 0.875rem;
-    color: #1f2937;
+    color: #666;
     user-select: none;
 }
 
 /* Conteneur principal de l'application */
 .chess-app {
-    max-width: 800px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 0.5rem;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
-    align-items: center;
-    background-color: #ffffff;
-    min-height: 100vh;
+    gap: 0.5rem;
 }
 
 /* Zone du titre */
 .chess-header {
-    width: 100%;
-    padding: 1.5rem;
-    background-color: #f8fafc;
-    border-radius: 8px;
     text-align: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 0.5rem;
+    margin: 0;
+}
+
+.chess-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #374151;
 }
 
 /* Zone de contrôle */
 .control-section {
+    margin: 0 auto;
+    max-width: 800px;
     width: 100%;
-    padding: 2rem;
+    padding: 0.5rem;
     background-color: #f1f5f9;
     border-radius: 8px;
     display: flex;
@@ -110,36 +109,29 @@
 
 /* Zone de saisie */
 .input-container {
-    padding: 1rem;
-    background-color: rgba(255, 255, 255, 0.5);
-    border-radius: 6px;
-    box-sizing: border-box;
+    margin-bottom: 0.5rem;
+    width: 100%;
 }
 
 .input-label {
     display: block;
-    margin-bottom: 0.75rem;
-    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
     font-weight: 500;
-    color: #1f2937;
+    color: #374151;
 }
 
 /* Style pour le textarea */
 .fen-input {
-    box-sizing: border-box;
-    display: block;
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    max-width: 100%;
+    min-height: 60px;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
     font-family: monospace;
     font-size: 0.875rem;
-    line-height: 1.5;
     resize: vertical;
-    min-height: 80px;
-    max-width: 100%;
-    background-color: white;
-    transition: all 0.2s;
+    box-sizing: border-box;
 }
 
 .fen-input:focus {
@@ -151,23 +143,66 @@
 /* Zone des boutons */
 .button-group {
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
     justify-content: center;
-    flex-wrap: wrap;
+}
+
+.control-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.control-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.control-button.primary {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.control-button.primary:hover:not(:disabled) {
+    background-color: #2563eb;
+}
+
+.control-button.secondary {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.control-button.secondary:hover:not(:disabled) {
+    background-color: #d1d5db;
+}
+
+.control-button.success {
+    background-color: #10b981;
+    color: white;
+}
+
+.control-button.success:hover:not(:disabled) {
+    background-color: #059669;
 }
 
 /* Zone d'information */
 .info-section {
-    width: 100%;
-    padding: 1rem;
-    background-color: #f8fafc;
-    border-radius: 8px;
     text-align: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin: 0.25rem 0;
 }
 
 /* Zone de l'échiquier */
 .board-section {
+    display: flex;
+    justify-content: center;
+    margin: 0.5rem 0;
     padding: 2rem;
     background-color: #f1f5f9;
     border-radius: 12px;
@@ -176,50 +211,11 @@
 
 /* Zone d'aide */
 .help-section {
-    width: 100%;
-    padding: 1.5rem;
-    background-color: #f8fafc;
-    border-radius: 8px;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
     text-align: center;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-/* Style pour les boutons */
-.control-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: all 0.2s;
-    border: none;
-    cursor: pointer;
-}
-
-.control-button.primary {
-    background-color: #3b82f6;
-    color: white;
-}
-
-.control-button.primary:hover {
-    background-color: #2563eb;
-}
-
-.control-button.secondary {
-    background-color: #64748b;
-    color: white;
-}
-
-.control-button.secondary:hover {
-    background-color: #475569;
-}
-
-.control-button.success {
-    background-color: #22c55e;
-    color: white;
-}
-
-.control-button.success:hover {
-    background-color: #16a34a;
 }

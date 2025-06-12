@@ -1,8 +1,62 @@
-import React, { useState, useEffect } from 'react';
-import { Play, RotateCcw, Pause, StepForward, StepBack } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Play, RotateCcw, Pause, StepForward, StepBack, Download } from 'lucide-react';
+import * as htmlToImage from 'html-to-image';
+import GIF from 'gif.js';
 import './chess-play-generator.css';
 
+// Types pour les pièces d'échecs
+type ChessPiece = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P' | 'k' | 'q' | 'r' | 'b' | 'n' | 'p';
+type PieceSymbols = { [K in ChessPiece]: string };
+
+// Interfaces pour la gestion des positions et mouvements
+interface PositionMap {
+  [square: string]: string;
+}
+
+interface SecondaryMove {
+  from: string;
+  to: string;
+  piece: string;
+}
+
+interface MoveInfo {
+  from: string;
+  to: string;
+  piece: string;
+  secondaryMove?: SecondaryMove;
+}
+
+interface MoveDetail {
+  from: string;
+  to: string;
+  piece: string;
+  secondaryFrom?: string;
+  secondaryTo?: string;
+  secondaryPiece?: string;
+}
+
+interface AlgebraicCoords {
+  row: number; // 0-7 pour les rangées (8-1)
+  col: number; // 0-7 pour les colonnes (a-h)
+}
+
+interface GeneratePositionsResult {
+  positions: Array<{ [key: string]: string }>;
+
+  moveDetails: MoveDetail[];
+}
+
+// Interfaces pour la conversion de FEN
+interface IsFrenchFEN {
+  (fen: string): boolean;
+}
+
+interface FrenchToStandardFEN {
+  (fen: string): string;
+}
+
 const ChessAnimator = () => {
+  const boardRef = useRef<HTMLDivElement>(null);
   const [fenInput, setFenInput] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 1.e4 e5 2.Nf3 Nc6');
   const [currentPosition, setCurrentPosition] = useState<{ [key: string]: string }>({});
   const [isAnimating, setIsAnimating] = useState(false);
@@ -10,31 +64,24 @@ const ChessAnimator = () => {
   const [moves, setMoves] = useState<string[]>([]);
   const [positions, setPositions] = useState<Array<{ [key: string]: string }>>([]);
   const [moveDetails, setMoveDetails] = useState<MoveDetail[]>([]);
+  const [isGeneratingGif, setIsGeneratingGif] = useState(false);
 
   const initialFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
   // Conversion des pièces FEN vers symboles Unicode (standard et français)
-  const pieceSymbols = {
+  const pieceSymbols: PieceSymbols = {
     // Format standard
     'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
     'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
   };
 
   // Détecte si le FEN est en format français
-  interface IsFrenchFEN {
-    (fen: string): boolean;
-  }
-
   const isFrenchFEN = React.useCallback<IsFrenchFEN>((fen) => {
     const boardPart = fen.split(' ')[0];
     return /[DdTtFfCc]/.test(boardPart);
   }, []);
 
   // Convertit FEN français vers standard pour traitement interne
-  interface FrenchToStandardFEN {
-    (fen: string): string;
-  }
-
   const frenchToStandardFEN = React.useCallback<FrenchToStandardFEN>((fen) => {
     if (!isFrenchFEN(fen)) return fen;
 
@@ -46,12 +93,7 @@ const ChessAnimator = () => {
       .replace(/C/g, 'N').replace(/c/g, 'n'); // Cavalier
     // P/p restent identiques pour Pion
   }, [isFrenchFEN]);
-
   // Conversion notation algébrique vers coordonnées
-  interface AlgebraicCoords {
-    row: number; // 0-7 pour les rangées (8-1)
-    col: number; // 0-7 pour les colonnes (a-h)
-  }
 
 
   // Conversion coordonnées vers notation algébrique  
@@ -102,7 +144,7 @@ const ChessAnimator = () => {
   // Vérifie s'il y a des pièces entre la case de départ et d'arrivée
   const isPieceBetween = React.useCallback((
     from: string,
-    to: string, 
+    to: string,
     position: PositionMap
   ): boolean => {
     const fromFile = from.charCodeAt(0) - 97;
@@ -184,27 +226,10 @@ const ChessAnimator = () => {
       case 'K': // Roi
         return deltaFile <= 1 && deltaRank <= 1;
 
-      default:        return false;
+      default: return false;
     }
   }, [isPieceBetween]);
   // Trouve la pièce qui peut faire le mouvement
-  interface PositionMap {
-    [square: string]: string;
-  }
-
-  interface SecondaryMove {
-    from: string;
-    to: string;
-    piece: string;
-  }
-
-  interface MoveInfo {
-    from: string;
-    to: string;
-    piece: string;
-    secondaryMove?: SecondaryMove;
-  }
-
   const findPieceForMove = React.useCallback((
     position: PositionMap,
     move: string,
@@ -288,21 +313,7 @@ const ChessAnimator = () => {
       isLegalMove(square, targetSquare, piece, position)
     ); return legalSquare ? { from: legalSquare, to: targetSquare, piece } : null;
   }, [isLegalMove]);
-
-  // Génère toutes les positions de l'animation
-  interface MoveDetail {
-    from: string;
-    to: string;
-    piece: string;
-    secondaryFrom?: string;
-    secondaryTo?: string;
-    secondaryPiece?: string;
-  }
-
-  interface GeneratePositionsResult {
-    positions: Array<{ [key: string]: string }>;
-    moveDetails: MoveDetail[];
-  }  // Réinitialise à la position de base
+  // Génère toutes les positions de l'animation// Réinitialise à la position de base
   const resetToInitial = React.useCallback(() => {
     setIsAnimating(false);
     setCurrentMoveIndex(0);
@@ -399,6 +410,83 @@ const ChessAnimator = () => {
   const toggleAnimation = React.useCallback(() => {
     setIsAnimating(!isAnimating);
   }, [isAnimating]);
+
+  // Crée un GIF à partir de toutes les positions
+  const generateGif = React.useCallback(async () => {
+    if (!boardRef.current || positions.length === 0) return;
+
+    // Sauvegarde l'état actuel
+    const currentIndex = currentMoveIndex;
+    const wasAnimating = isAnimating;
+    setIsAnimating(false);
+    setIsGeneratingGif(true);
+
+    try {
+      const board = boardRef.current;
+
+      // Création du GIF avec la taille exacte du conteneur
+      const gif = new GIF({
+        workers: 2,
+        quality: 10,
+        width: board.getBoundingClientRect().width,
+        height: board.getBoundingClientRect().height,
+        workerScript: '/gif.worker.js'
+      });
+
+      // Capture chaque position
+      for (let i = 0; i < positions.length; i++) {
+        setCurrentMoveIndex(i);
+        setCurrentPosition(positions[i]);
+        // Attendre que le DOM soit mis à jour
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        try {
+          const dataUrl = await htmlToImage.toPng(board, {
+            backgroundColor: '#ffffff',
+            pixelRatio: 1,
+            skipAutoScale: true,
+            style: {
+              transform: 'none',
+              transformOrigin: 'center'
+            },
+            cacheBust: true
+          });
+
+          const img = new Image();
+          img.src = dataUrl;
+          await new Promise(resolve => img.onload = resolve);
+          gif.addFrame(img, { delay: 1000 });
+        } catch (err) {
+          console.error('Error capturing frame:', err);
+        }
+      }
+
+      // Génère le GIF et le télécharge
+      gif.on('finished', (blob: Blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'chess-sequence.gif';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        // Restaure l'état
+        setCurrentMoveIndex(currentIndex);
+        setCurrentPosition(positions[currentIndex]);
+        setIsAnimating(wasAnimating);
+        setIsGeneratingGif(false);
+      });
+
+      gif.render();
+    } catch (error) {
+      console.error('Error generating GIF:', error);
+      // Restaure l'état en cas d'erreur
+      setCurrentMoveIndex(currentIndex);
+      setCurrentPosition(positions[currentIndex]);
+      setIsAnimating(wasAnimating);
+      setIsGeneratingGif(false);
+    }
+  }, [positions, currentMoveIndex, isAnimating]);
 
   // Effet pour l'animation automatique
   useEffect(() => {
@@ -529,96 +617,120 @@ const ChessAnimator = () => {
     return board;
   };
 
-  return (
-    <div className="chess-app">
-      <div className="chess-header">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Animateur d'Échecs FEN avec Pièce Fantôme
-        </h1>
-      </div>      <div className="control-section">
-        <div className="input-container">
-          <label className="input-label">
-            FEN + Coups (compatible format standard et français)
-          </label>
-          <textarea
-            value={fenInput}
-            onChange={(e) => setFenInput(e.target.value)}
-            className="fen-input"
-            rows={3}
-            placeholder="Standard: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 1.e4 e5... | Français: tcfdrcft/pppppppp/8/8/8/8/PPPPPPPP/TCFDRCFT w - - 0 1 1.e4 e5..."
-          />
-        </div>
-
-        <div className="button-group">
-          <button
-            onClick={resetToInitial}
-            className="control-button secondary"
-          >
-            <RotateCcw size={16} />
-            Réinitialiser
-          </button>
-
-          <button
-            onClick={stepBack}
-            className="control-button primary"
-            disabled={currentMoveIndex === 0}
-          >
-            <StepBack size={16} />
-            Reculer
-          </button>
-
-          <button
-            onClick={toggleAnimation}
-            className="control-button success"
-          >
-            {isAnimating ? <Pause size={16} /> : <Play size={16} />}
-            {isAnimating ? 'Pause' : 'Lecture'}
-          </button>
-
-          <button
-            onClick={stepForward}
-            className="control-button primary"
-            disabled={currentMoveIndex >= positions.length - 1}
-          >
-            <StepForward size={16} />
-            Avancer
-          </button>
-        </div>
+  return (<div className="chess-app">
+    <header className="chess-header">
+      <h1 className="chess-title">
+        Welcome to Chess Play Generator
+      </h1>
+    </header><div className="control-section">
+      <div className="input-container">
+        <label className="input-label">
+          FEN + Coups (compatible format standard et français)
+        </label>
+        <textarea
+          value={fenInput}
+          onChange={(e) => setFenInput(e.target.value)}
+          className="fen-input"
+          rows={3}
+          placeholder="Standard: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 1.e4 e5... | Français: tcfdrcft/pppppppp/8/8/8/8/PPPPPPPP/TCFDRCFT w - - 0 1 1.e4 e5..."
+        />
       </div>
 
-      {moves.length > 0 && (
-        <div className="info-section">
-          <p className="text-sm text-gray-600">
-            Coup {currentMoveIndex} / {positions.length - 1}
-            {currentMoveIndex > 0 && moves[currentMoveIndex - 1] && (
-              <span className="ml-2 font-semibold">
-                Dernier coup: {moves[currentMoveIndex - 1]}
-              </span>
-            )}
-          </p>
-        </div>
-      )}
+      <div className="button-group">
+        <button
+          onClick={resetToInitial}
+          className="control-button secondary"
+        >
+          <RotateCcw size={16} />
+          Réinitialiser
+        </button>
 
-      <div className="board-section">
-        <div className="chessboard-container">
-          {renderBoard()}
-        </div>
-      </div>
+        <button
+          onClick={stepBack}
+          className="control-button primary"
+          disabled={currentMoveIndex === 0}
+        >
+          <StepBack size={16} />
+          Reculer
+        </button>
 
-      <div className="help-section">
-        <div className="text-sm text-gray-600">
-          <p>Format accepté: FEN standard ou français suivi des coups en notation algébrique</p>
-          <p>Exemple standard: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 1.e4 e5 2.Nf3 Nc6</p>
-          <p>Exemple français: tcfdrcft/pppppppp/8/8/8/8/PPPPPPPP/TCFDRCFT w - - 0 1 1.e4 e5 2.Cf3 Cc6</p>
-          <p className="mt-2 text-cyan-600 font-medium">
-            🔮 Les pièces fantômes cyan indiquent la position de départ du dernier mouvement
-          </p>
-          <p className="mt-1 text-purple-600 font-medium">
-            🔄 L'échiquier s'oriente automatiquement selon le joueur dont c'est le tour (w=blancs en bas, b=noirs en bas)
-          </p>
-        </div>
+        <button
+          onClick={toggleAnimation}
+          className="control-button success"
+        >
+          {isAnimating ? <Pause size={16} /> : <Play size={16} />}
+          {isAnimating ? 'Pause' : 'Lecture'}
+        </button>
+
+        <button
+          onClick={stepForward}
+          className="control-button primary"
+          disabled={currentMoveIndex >= positions.length - 1}
+        >
+          <StepForward size={16} />
+          Avancer
+        </button>
+
+        <button
+          onClick={generateGif}
+          className="control-button primary ml-4"
+          disabled={positions.length === 0 || isGeneratingGif}
+          title="Générer un GIF animé de la séquence"
+        >
+          <Download size={16} />
+          {isGeneratingGif ? 'Génération...' : 'Télécharger GIF'}
+        </button>
       </div>
     </div>
+
+    {moves.length > 0 && (
+      <div className="info-section">
+        <p className="text-sm text-gray-600">
+          Coup {currentMoveIndex} / {positions.length - 1}
+          {currentMoveIndex > 0 && moves[currentMoveIndex - 1] && (
+            <span className="ml-2 font-semibold">
+              Dernier coup: {moves[currentMoveIndex - 1]}
+            </span>
+          )}
+        </p>
+      </div>
+    )}
+
+    <div className="board-section">
+      <div
+        className="chessboard-container"
+        ref={boardRef}
+        style={{
+          display: 'inline-grid',
+          gridTemplateColumns: 'repeat(10, 1fr)',
+          gridTemplateRows: 'repeat(10, 1fr)',
+          gap: '0px',
+          padding: '8px',
+          backgroundColor: '#fff',
+          boxSizing: 'border-box',
+          border: '1px solid #ccc',
+          borderRadius: '4px',
+          width: 'fit-content'
+        }}
+      >
+        {renderBoard()}
+      </div>
+    </div>
+
+    <div className="help-section">
+      <div className="text-sm text-gray-600">
+        <p>Format accepté: FEN standard ou français suivi des coups en notation algébrique</p>
+        <p>Exemple standard: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 1.e4 e5 2.Nf3 Nc6</p>
+        <p>Exemple français: tcfdrcft/pppppppp/8/8/8/8/PPPPPPPP/TCFDRCFT w - - 0 1 1.e4 e5 2.Cf3 Cc6</p>
+        <p className="mt-2 text-cyan-600 font-medium">
+          🔮 Les pièces fantômes cyan indiquent la position de départ du dernier mouvement
+        </p>
+        <p className="mt-1 text-purple-600 font-medium">
+          🔄 L'échiquier s'oriente automatiquement selon le joueur dont c'est le tour (w=blancs en bas, b=noirs en bas)
+        </p>
+      </div>
+    </div>
+  </div>
   );
 };
 

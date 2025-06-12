@@ -5,7 +5,6 @@ import './components/chess-play-generator.css';
 const App: React.FC = () => {
     return (
         <div>
-            <h1>Welcome to Chess Play Generator</h1>
             <ChessAnimator />
         </div>
     );
