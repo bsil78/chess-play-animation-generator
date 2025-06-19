@@ -1,17 +1,27 @@
 import React from 'react';
-import { ChessPiece as ChessPieceType } from '../../types/chess';
+import { StandardPiece } from '../../types/notation';
 import './ChessPiece.css';
 
 /** 
  * Table de conversion des pièces vers leurs symboles Unicode
  */
-const pieceSymbols: { [key in ChessPieceType]: string } = {
-    'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
-    'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+const pieceSymbols: Record<StandardPiece, string> = {
+    [StandardPiece.WhiteKing]: '♔',
+    [StandardPiece.WhiteQueen]: '♕',
+    [StandardPiece.WhiteRook]: '♖',
+    [StandardPiece.WhiteBishop]: '♗',
+    [StandardPiece.WhiteKnight]: '♘',
+    [StandardPiece.WhitePawn]: '♙',
+    [StandardPiece.BlackKing]: '♚',
+    [StandardPiece.BlackQueen]: '♛',
+    [StandardPiece.BlackRook]: '♜',
+    [StandardPiece.BlackBishop]: '♝',
+    [StandardPiece.BlackKnight]: '♞',
+    [StandardPiece.BlackPawn]: '♟'
 };
 
 interface ChessPieceProps {
-    piece: ChessPieceType;
+    piece: StandardPiece;
     isGhost?: boolean;
     isLastMove?: boolean;
     isWhite: boolean;

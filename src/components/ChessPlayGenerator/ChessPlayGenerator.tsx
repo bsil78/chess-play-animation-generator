@@ -1,156 +1,124 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import * as htmlToImage from 'html-to-image';
 import GIF from 'gif.js';
+import { PositionMap, MoveDetail, createEmptyPosition, createPositionWithPieces, Square } from '../../types/chess';
+import { generatePositions } from '../../utils/ChessRules';
+import { parseFEN } from '../../utils';
+import { StandardPiece } from '../../types/notation';
 import ChessBoard from '../ChessBoard/ChessBoard';
 import GameControls from '../GameControls/GameControls';
-import { PositionMap, MoveDetail } from '../../types/chess';
-import {
-  parseFEN,
-  parseMoves,
-  generatePositions,
-  frenchToStandardFEN
-} from '../../utils/ChessRules';
 import './ChessPlayGenerator.css';
 
 /**
- * Composant principal ChessAnimator
- * --------------------------------
+ * Composant principal ChessPlayGenerator
  * Gère l'affichage et l'animation d'une séquence de coups d'échecs
  */
-const ChessAnimator = () => {
-  /**
-   * Hooks d'état (useState)
-   * ----------------------
-   */
-
+const ChessPlayGenerator: React.FC = () => {
   // Référence vers l'élément DOM de l'échiquier pour la génération de GIF
   const boardRef = useRef<HTMLDivElement>(null);
 
-  // Position FEN et coups en entrée
+  // États principaux
   const [fenInput, setFenInput] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 1.e4 e5 2.Nf3 Nc6');
-  // État actuel de l'échiquier
-  const [currentPosition, setCurrentPosition] = useState<PositionMap>({});
-
-  // Contrôle de l'animation
+  const [currentPosition, setCurrentPosition] = useState<PositionMap>(createEmptyPosition());
   const [isAnimating, setIsAnimating] = useState(false);
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
+  const [isGeneratingGif, setIsGeneratingGif] = useState(false);
 
-  // Liste des coups et positions
+  // Données dérivées de la position FEN
   const [moves, setMoves] = useState<string[]>([]);
   const [positions, setPositions] = useState<PositionMap[]>([]);
   const [moveDetails, setMoveDetails] = useState<MoveDetail[]>([]);
-
-  // État de la génération du GIF
-  const [isGeneratingGif, setIsGeneratingGif] = useState(false);
 
   // Position FEN initiale standard
   const initialFEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
   /**
-   * Gestion de l'animation et de l'état
-   * ---------------------------------
+   * Navigation et contrôles
    */
+  const goToPosition = useCallback((index: number) => {
+    if (index >= 0 && index < positions.length && positions[index]) {
+      setCurrentMoveIndex(index);
+      setCurrentPosition(positions[index]!);
+    }
+  }, [positions]);
 
-  /**
-   * Réinitialise l'animation à la position initiale
-   */  const resetToInitial = React.useCallback(() => {
+  const resetToInitial = useCallback(() => {
     setIsAnimating(false);
     setCurrentMoveIndex(0);
-    if (positions.length > 0) {
+    if (positions.length > 0 && positions[0]) {
       setCurrentPosition(positions[0]);
     } else {
-      const initialPos = parseFEN(initialFEN);
-      setCurrentPosition(initialPos);
-      setPositions([initialPos]);
+      const parsedFEN = parseFEN(initialFEN);
+      if (parsedFEN.isValid) {
+        setCurrentPosition(parsedFEN.structure.position);
+      }
     }
-  }, [positions]);
+  }, [positions, initialFEN]);
 
-  // Navigation vers une position spécifique avec validation
-  const goToPosition = React.useCallback((index: number) => {
-    if (index >= 0 && index < positions.length) {
-      setCurrentMoveIndex(index);
-      setCurrentPosition(positions[index]);
-    }
-  }, [positions]);
-
-  // Avance d'un pas dans l'animation
-  const stepForward = React.useCallback(() => {
+  const stepForward = useCallback(() => {
     if (currentMoveIndex < positions.length - 1) {
       goToPosition(currentMoveIndex + 1);
     }
   }, [currentMoveIndex, goToPosition, positions.length]);
 
-  // Recule d'un pas dans l'animation
-  const stepBack = React.useCallback(() => {
+  const stepBack = useCallback(() => {
     if (currentMoveIndex > 0) {
       goToPosition(currentMoveIndex - 1);
     }
   }, [currentMoveIndex, goToPosition]);
 
-  // Lance/arrête l'animation
-  const toggleAnimation = React.useCallback(() => {
+  const toggleAnimation = useCallback(() => {
     setIsAnimating(!isAnimating);
   }, [isAnimating]);
 
-  // Fonctions utilitaires mémorisées
-  const lastMoveSquares = useMemo(() => {
-    if (currentMoveIndex === 0 || !moveDetails[currentMoveIndex - 1]) return [];
+  /**
+   * Données calculées
+   */
+  const lastMoveSquares = useMemo((): Square[] => {
+    if (currentMoveIndex === 0) return [];
     const currentMove = moveDetails[currentMoveIndex - 1];
-    const squares = [currentMove.from, currentMove.to];
-    if (currentMove.secondaryFrom && currentMove.secondaryTo) {
-      squares.push(currentMove.secondaryFrom, currentMove.secondaryTo);
+    if (!currentMove) return [];
+    
+    const squares: Square[] = [currentMove.from, currentMove.to];
+    if (currentMove.secondaryMove) {
+        squares.push(currentMove.secondaryMove.from, currentMove.secondaryMove.to);
     }
     return squares;
   }, [currentMoveIndex, moveDetails]);
-  const ghostPieces = useMemo(() => {
-    if (currentMoveIndex === 0 || !moveDetails[currentMoveIndex - 1]) return {};
-    const currentMove = moveDetails[currentMoveIndex - 1];
-    const pieces: PositionMap = {
-      [currentMove.from]: currentMove.piece
-    };
-    if (currentMove.secondaryFrom && currentMove.secondaryPiece) {
-      pieces[currentMove.secondaryFrom] = currentMove.secondaryPiece;
+
+  const ghostPieces = useMemo((): PositionMap => {
+    if (currentMoveIndex === 0) {
+        return createEmptyPosition();
     }
-    return pieces;
+    
+    const currentMove = moveDetails[currentMoveIndex - 1];
+    if (!currentMove) {
+        return createEmptyPosition();
+    }
+    
+    const pieces: Record<string, StandardPiece> = {};
+    
+    pieces[currentMove.from] = currentMove.piece;
+    
+    if (currentMove.secondaryMove) {
+        pieces[currentMove.secondaryMove.from] = currentMove.secondaryMove.piece;
+    }
+    
+    return createPositionWithPieces(pieces);
   }, [currentMoveIndex, moveDetails]);
 
   const boardOrientation = useMemo(() => {
-    if (positions.length === 0) return true;
-
-    const parts = fenInput.split(' ');
-    if (parts.length < 2) return true;
-
-    const fenPart = parts.slice(0, 6).join(' ');
-    const standardFEN = frenchToStandardFEN(fenPart);
-    const activeColor = standardFEN.split(' ')[1];
-
-    return activeColor === 'w';
-  }, [fenInput, positions.length]);
+    if (fenInput.trim().length === 0) return true;
+    const parsedFEN = parseFEN(fenInput);
+    return parsedFEN.isValid ? parsedFEN.structure.activeColor === 'w' : true;
+  }, [fenInput]);
 
   /**
    * Génération de GIF
-   * ----------------
-   * 
-   * La génération de GIF se fait en plusieurs étapes :
-   * 1. Capture de l'état initial et arrêt de l'animation en cours
-   * 2. Création d'un objet GIF avec les paramètres optimaux
-   * 3. Itération sur toutes les positions pour capturer chaque frame
-   * 4. Génération et téléchargement du fichier final
-   * 
-   * Paramètres techniques :
-   * - Résolution : taille exacte du conteneur d'échiquier
-   * - Qualité : 10 (compromis taille/qualité)
-   * - Workers : 2 (parallélisation du traitement)
-   * - Délai : 1000ms entre chaque frame
-   * 
-   * Gestion des erreurs :
-   * - Validation des prérequis (référence DOM, positions)
-   * - Restauration de l'état en cas d'erreur
-   * - Nettoyage des ressources après génération
-   */  const generateGif = React.useCallback(async () => {
+   */
+  const generateGif = useCallback(async () => {
     if (!boardRef.current || positions.length === 0) return;
 
-    // Sauvegarde l'état actuel
     const currentIndex = currentMoveIndex;
     const wasAnimating = isAnimating;
     setIsAnimating(false);
@@ -158,8 +126,6 @@ const ChessAnimator = () => {
 
     try {
       const board = boardRef.current;
-
-      // Création du GIF avec la taille exacte du conteneur
       const gif = new GIF({
         workers: 2,
         quality: 10,
@@ -171,8 +137,10 @@ const ChessAnimator = () => {
       // Capture chaque position
       for (let i = 0; i < positions.length; i++) {
         setCurrentMoveIndex(i);
-        setCurrentPosition(positions[i]);
-        // Attendre que le DOM soit mis à jour
+        const position = positions[i];
+        if (position) {
+          setCurrentPosition(position);
+        }
         await new Promise(resolve => setTimeout(resolve, 100));
 
         try {
@@ -189,14 +157,15 @@ const ChessAnimator = () => {
 
           const img = new Image();
           img.src = dataUrl;
-          await new Promise(resolve => img.onload = resolve);
+          await new Promise<void>(resolve => { 
+            img.onload = () => resolve(); 
+          });
           gif.addFrame(img, { delay: 1000 });
         } catch (err) {
           console.error('Error capturing frame:', err);
         }
       }
 
-      // Génère le GIF et le télécharge
       gif.on('finished', (blob: Blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -207,7 +176,10 @@ const ChessAnimator = () => {
 
         // Restaure l'état
         setCurrentMoveIndex(currentIndex);
-        setCurrentPosition(positions[currentIndex]);
+        const restoredPosition = positions[currentIndex];
+        if (restoredPosition) {
+          setCurrentPosition(restoredPosition);
+        }
         setIsAnimating(wasAnimating);
         setIsGeneratingGif(false);
       });
@@ -215,84 +187,62 @@ const ChessAnimator = () => {
       gif.render();
     } catch (error) {
       console.error('Error generating GIF:', error);
-      // Restaure l'état en cas d'erreur
       setCurrentMoveIndex(currentIndex);
-      setCurrentPosition(positions[currentIndex]);
+      const restoredPosition = positions[currentIndex];
+      if (restoredPosition) {
+        setCurrentPosition(restoredPosition);
+      }
       setIsAnimating(wasAnimating);
       setIsGeneratingGif(false);
     }
   }, [currentMoveIndex, isAnimating, positions]);
+
   /**
-   * Gestion des effets et cycles de vie
-   * --------------------------------
-   * L'application utilise plusieurs effets React pour :
-   * 
-   * 1. Animation automatique :
-   * - Timer pour les transitions entre positions
-   * - Gestion des états de pause/lecture
-   * - Nettoyage automatique des ressources
-   * 
-   * 2. Synchronisation FEN/Position :
-   * - Parse et validation des entrées
-   * - Génération des positions intermédiaires
-   * - Mise à jour de l'interface
-   * 
-   * 3. Gestion de la mémoire :
-   * - Nettoyage des timers
-   * - Libération des ressources GIF
-   * - Optimisation des re-rendus
+   * Effets
    */
-
-  // Effet pour l'animation automatique : gestion du timing et transitions
+  // Animation automatique
   useEffect(() => {
-    let timer: NodeJS.Timeout | null = null;
-
-    if (isAnimating && currentMoveIndex < positions.length - 1) {
-      timer = setTimeout(() => {
-        goToPosition(currentMoveIndex + 1);
-      }, 1000);
-    } else if (currentMoveIndex >= positions.length - 1) {
-      setIsAnimating(false);
+    if (!isAnimating || currentMoveIndex >= positions.length - 1) {
+      if (currentMoveIndex >= positions.length - 1) {
+        setIsAnimating(false);
+      }
+      return;
     }
 
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
+    const timer = setTimeout(() => {
+      goToPosition(currentMoveIndex + 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, [isAnimating, currentMoveIndex, goToPosition, positions.length]);
 
-  // Effet pour synchroniser les positions avec l'entrée FEN
+  // Synchronisation avec l'entrée FEN
   useEffect(() => {
-    if (fenInput && fenInput.trim().length > 0) {
-      const parts = fenInput.split(' ');
-      const fenPart = parts.slice(0, 6).join(' ');
-      const movePart = parts.slice(6).join(' ');
+    if (!fenInput || fenInput.trim().length === 0) return;
 
-      const initialPos = parseFEN(fenPart);
-      const moveList = parseMoves(movePart);
-
-      const { positions: nextPositions, moveDetails: allMoveDetails } = generatePositions(initialPos, moveList);
-
-      setMoves(moveList);
-      setPositions([initialPos, ...nextPositions.slice(1)]);
-      setMoveDetails(allMoveDetails);
-      setCurrentPosition(initialPos);
-      setCurrentMoveIndex(0);
+    const parsedFEN = parseFEN(fenInput);
+    if (!parsedFEN.isValid) {
+      console.error('Invalid FEN:', parsedFEN.error);
+      return;
     }
+
+    const result = generatePositions(parsedFEN.structure.position, parsedFEN.structure.moves);
+
+    setMoves(parsedFEN.structure.moves);
+    setPositions([parsedFEN.structure.position, ...result.positions]);
+    setMoveDetails(result.moveDetails);
+    setCurrentPosition(parsedFEN.structure.position);
+    setCurrentMoveIndex(0);
   }, [fenInput]);
 
-  /**
-   * Fonctions utilitaires pour les composants enfants
-   * --------------------------------------------
-   * Ces fonctions préparent les données nécessaires aux composants
-   * ChessBoard et GameControls, en assurant une séparation claire
-   * des responsabilités et en minimisant le couplage.
-   */
+  // Protection pour s'assurer qu'on a toujours un lastMove valide
+  const safeLastMove = currentMoveIndex > 0 && moves[currentMoveIndex - 1] ? 
+    moves[currentMoveIndex - 1] : undefined;
+
   return (
     <div className="chess-app">
       <header className="chess-header">
-        <h1 className="chess-title">
-          Welcome to Chess Play Generator
-        </h1>
+        <h1 className="chess-title">Chess Play Generator</h1>
       </header>
 
       <GameControls
@@ -302,7 +252,7 @@ const ChessAnimator = () => {
         isGeneratingGif={isGeneratingGif}
         currentMoveIndex={currentMoveIndex}
         totalMoves={positions.length - 1}
-        lastMove={currentMoveIndex > 0 ? moves[currentMoveIndex - 1] : undefined}
+        lastMove={safeLastMove}
         onReset={resetToInitial}
         onStepBack={stepBack}
         onTogglePlay={toggleAnimation}
@@ -312,7 +262,7 @@ const ChessAnimator = () => {
 
       <ChessBoard
         ref={boardRef}
-        currentPosition={currentPosition}
+        position={currentPosition}
         isWhitePerspective={boardOrientation}
         lastMoveSquares={lastMoveSquares}
         ghostPieces={ghostPieces}
@@ -321,4 +271,4 @@ const ChessAnimator = () => {
   );
 };
 
-export default ChessAnimator;
+export default ChessPlayGenerator;

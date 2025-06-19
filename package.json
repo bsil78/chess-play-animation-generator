@@ -13,10 +13,12 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --watchAll=false",
+    "test:watch": "react-scripts test",
     "eject": "react-scripts eject"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "react-scripts": "^5.0.1",

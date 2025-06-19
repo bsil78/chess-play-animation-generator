@@ -1,14 +1,29 @@
 import React, { forwardRef } from 'react';
 import ChessPiece from '../ChessPiece/ChessPiece';
-import { PositionMap, ChessPiece as ChessPieceType } from '../../types/chess';
+import { PositionMap } from '../../types/chess';
+import { StandardPiece, Square, File, Rank } from '../../types/notation';
 import './ChessBoard.css';
 
 interface ChessBoardProps {
-    currentPosition: PositionMap;
+    position: PositionMap;
     isWhitePerspective: boolean;
-    lastMoveSquares: string[];
+    lastMoveSquares: Square[];
     ghostPieces: PositionMap;
 }
+
+/**
+ * Fonction utilitaire pour déterminer si une pièce est blanche
+ */
+const isWhitePieceCheck = (piece: StandardPiece): boolean => {
+    return [
+        StandardPiece.WhiteKing,
+        StandardPiece.WhiteQueen,
+        StandardPiece.WhiteRook,
+        StandardPiece.WhiteBishop,
+        StandardPiece.WhiteKnight,
+        StandardPiece.WhitePawn
+    ].includes(piece);
+};
 
 /**
  * Composant ChessBoard
@@ -20,26 +35,35 @@ interface ChessBoardProps {
  * - Les effets visuels (derniers coups, pièces fantômes)
  */
 const ChessBoard = forwardRef<HTMLDivElement, ChessBoardProps>(({
-    currentPosition,
+    position,
     isWhitePerspective,
     lastMoveSquares,
     ghostPieces
 }, ref) => {
     // Détermine l'ordre des files et rangées selon l'orientation
-    const files = isWhitePerspective ? ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] : ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'];
-    const ranks = isWhitePerspective ? ['8', '7', '6', '5', '4', '3', '2', '1'] : ['1', '2', '3', '4', '5', '6', '7', '8'];
+    const files = isWhitePerspective ?
+        [File.A, File.B, File.C, File.D, File.E, File.F, File.G, File.H] :
+        [File.H, File.G, File.F, File.E, File.D, File.C, File.B, File.A];
+    const ranks = isWhitePerspective ?
+        ['8', '7', '6', '5', '4', '3', '2', '1'] :
+        ['1', '2', '3', '4', '5', '6', '7', '8'];
 
     const renderSquare = (row: number, col: number) => {
         const boardRow = isWhitePerspective ? row - 1 : 8 - row;
         const boardCol = isWhitePerspective ? col - 1 : 8 - col;
         const isLight = (boardRow + boardCol) % 2 === 0;
-        const square = String.fromCharCode(97 + (isWhitePerspective ? col - 1 : 8 - col)) +
-            (isWhitePerspective ? 8 - (row - 1) : row);
 
-        const piece = currentPosition[square] as ChessPieceType;
-        const ghostPiece = ghostPieces[square] as ChessPieceType;
+        // Construct square using File and Rank types
+        const file = String.fromCharCode(97 + (isWhitePerspective ? col - 1 : 8 - col)) as File;
+        const rank = (isWhitePerspective ? 8 - (row - 1) : row) as Rank;
+        const square = `${file}${rank}` as Square;
+
+        const piece = position[square];
+        const ghostPiece = ghostPieces[square];
         const isLastMove = lastMoveSquares.includes(square);
-        const isWhitePiece = piece ? piece === piece.toUpperCase() : false;
+        
+        // Correction : Vérifier si la pièce est blanche en utilisant l'enum StandardPiece
+        const isWhitePiece = piece ? isWhitePieceCheck(piece) : false;
 
         return (
             <div key={`square-${row}-${col}`} className="board-cell">
@@ -48,7 +72,7 @@ const ChessBoard = forwardRef<HTMLDivElement, ChessBoardProps>(({
                         <ChessPiece
                             piece={ghostPiece}
                             isGhost={true}
-                            isWhite={ghostPiece === ghostPiece.toUpperCase()}
+                            isWhite={isWhitePieceCheck(ghostPiece)}
                         />
                     )}
                     {piece && (
@@ -65,12 +89,13 @@ const ChessBoard = forwardRef<HTMLDivElement, ChessBoardProps>(({
 
     const renderCoordLabel = (row: number, col: number) => {
         let coordLabel = '';
+        
         if ((row === 0 || row === 9) && col > 0 && col < 9) {
-            coordLabel = files[col - 1];
+            coordLabel = files[col - 1] ?? '';
         } else if ((col === 0 || col === 9) && row > 0 && row < 9) {
-            coordLabel = ranks[row - 1];
+            coordLabel = ranks[row - 1] ?? '';
         }
-
+        
         return (
             <div key={`coord-${row}-${col}`} className="board-cell coord-label">
                 {coordLabel}

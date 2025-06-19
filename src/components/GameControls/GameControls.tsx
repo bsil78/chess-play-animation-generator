@@ -135,7 +135,7 @@ const GameControls: React.FC<GameControlsProps> = ({
                 <div className="text-sm text-gray-600">
                     <p>Format accepté: FEN standard ou français suivi des coups en notation algébrique</p>
                     <p>Exemple standard: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 1.e4 e5 2.Nf3 Nc6</p>
-                    <p>Exemple français: tcfdrcft/pppppppp/8/8/8/8/PPPPPPPP/TCFDRCFT w - - 0 1 1.e4 e5 2.Cf3 Cc6</p>
+                    <p>Exemple français: tcfdrfct/pppppppp/8/8/8/8/PPPPPPPP/TCFDRFCT w - - 0 1 1.e4 e5 2.Cf3 Cc6</p>
                     <p className="mt-2 text-cyan-600 font-medium">
                         🔮 Les pièces fantômes cyan indiquent la position de départ du dernier mouvement
                     </p>

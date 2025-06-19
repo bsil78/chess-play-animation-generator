@@ -1,81 +1,60 @@
+// src/types/chess.ts
+import { StandardPiece, Square } from './notation';
+
 /**
  * Types et interfaces pour l'application d'échecs
  * -------------------------------------------
  */
 
-/**
- * Type représentant les pièces d'échecs possibles.
- * Majuscules pour les pièces blanches, minuscules pour les noires.
- * K/k: Roi, Q/q: Dame, R/r: Tour, B/b: Fou, N/n: Cavalier, P/p: Pion
- */
-export type ChessPiece = 'K' | 'Q' | 'R' | 'B' | 'N' | 'P' | 'k' | 'q' | 'r' | 'b' | 'n' | 'p';
 
 /**
  * Structure représentant l'échiquier comme un dictionnaire
- * où les clés sont les cases (ex: "e4") et les valeurs sont les pièces
+ * où les clés sont les cases (ex : "e4") et les valeurs sont les pièces
+ * Utilise Partial pour permettre des cases vides (optionnelles)
  */
-export interface PositionMap {
-    [square: string]: ChessPiece;
-}
+export type PositionMap = Partial<Record<Square, StandardPiece>>;
+
+/**
+ * Crée une PositionMap vide
+ */
+export const createEmptyPosition = (): PositionMap => ({});
+
+/**
+ * Crée une PositionMap avec les pièces spécifiées
+ */
+export const createPositionWithPieces = (pieces: Partial<Record<string, StandardPiece>>): PositionMap => {
+    return pieces as PositionMap;
+};
 
 /**
  * Représente un mouvement secondaire, utilisé principalement pour le roque
  * où la tour doit aussi se déplacer
  */
 export interface SecondaryMove {
-    from: string;
-    to: string;
-    piece: ChessPiece;
+    from: Square;
+    to: Square;
+    piece: StandardPiece;
 }
 
+
 /**
- * Information complète sur un mouvement, incluant un éventuel
- * mouvement secondaire pour le roque
+ * Détails d'un coup pour l'animation
  */
-export interface MoveInfo {
-    from: string;
-    to: string;
-    piece: ChessPiece;
+export interface MoveDetail {
+    from: Square;
+    to: Square;
+    piece: StandardPiece;
     secondaryMove?: SecondaryMove;
 }
 
 /**
- * Détails d'un mouvement pour l'affichage et l'animation,
- * incluant les informations pour le roque
- */
-export interface MoveDetail {
-    from: string;
-    to: string;
-    piece: ChessPiece;
-    secondaryFrom?: string;
-    secondaryTo?: string;
-    secondaryPiece?: ChessPiece;
-}
-
-/**
- * Types pour la gestion de la notation française
- */
-export interface IsFrenchFEN {
-    (fen: string): boolean;
-}
-
-export interface FrenchToStandardFEN {
-    (fen: string): string;
-}
-
-/**
- * Coordonnées sur l'échiquier
- */
-export interface AlgebraicCoords {
-    row: number; // 0-7 pour les rangées (8-1)
-    col: number; // 0-7 pour les colonnes (a-h)
-}
-
-/**
- * Résultat de la génération des positions, contenant toutes les
- * positions intermédiaires et les détails des mouvements
+ * Résultat de la génération de positions
  */
 export interface GeneratePositionsResult {
     positions: PositionMap[];
     moveDetails: MoveDetail[];
+    error?: string;
 }
+
+
+export type { Square };
